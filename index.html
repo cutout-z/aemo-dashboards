@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEMO Dashboards</title>
+<meta name="description" content="Open dashboards on Australia's National Electricity Market, built from AEMO's public data.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23ff7a3d'/%3E%3Ctext x='16' y='21.5' font-family='system-ui,sans-serif' font-size='13' font-weight='700' text-anchor='middle' fill='%230a0a0a'%3EAE%3C/text%3E%3C/svg%3E">
+<script>
+  // Theme before first paint: ?theme=light|dark forces one without changing the saved choice;
+  // otherwise the viewer's saved choice; otherwise dark (the family default).
+  (function () {
+    var t = null;
+    try { t = new URLSearchParams(location.search).get('theme'); } catch (e) {}
+    if (t !== 'light' && t !== 'dark') { try { t = localStorage.getItem('aemo-dashboards:theme'); } catch (e) {} }
+    document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+  })();
+</script>
+<style>
+  /* Family tokens: the same values the five dashboards compile into their app.css. */
+  :root {
+    color-scheme: dark;
+    --bg: #0a0a0a; --canvas: #0c0c0c; --surface: #171717; --surface-2: #1e1e1e; --surface-3: #292929;
+    --line: #2a2a2a; --line-soft: #212121; --line-strong: #3a3a3a;
+    --text: #fafafa; --muted: #a3a3a3; --faint: #898989;
+    --accent: #ff7a3d; --accent-soft: #2a1810; --accent-wash: #2a1810; --ring: rgba(255,122,61,.45);
+    --shadow-card: inset 0 1px 0 hsla(0,0%,100%,.045), 0 1px 2px rgba(0,0,0,.5);
+    --shadow-pop: 0 16px 48px -12px rgba(0,0,0,.7), 0 0 0 1px var(--line);
+    --scrim: rgba(0,0,0,.6);
+  }
+  [data-theme=light] {
+    color-scheme: light;
+    --bg: #f4f4f4; --canvas: #fcfcfc; --surface: #fff; --surface-2: #f5f5f5; --surface-3: #ececec;
+    --line: #e7e7e7; --line-soft: #f0f0f0; --line-strong: #d4d4d4;
+    --text: #0a0a0a; --muted: #525252; --faint: #737373;
+    --accent: #ea580c; --accent-soft: #fff1e8; --accent-wash: #fff1e8; --ring: rgba(234,88,12,.35);
+    --shadow-card: 0 1px 2px rgba(0,0,0,.04);
+    --shadow-pop: 0 16px 48px -12px rgba(0,0,0,.18), 0 0 0 1px var(--line);
+    --scrim: hsla(0,0%,4%,.28);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+    font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  a { color: inherit; }
+  .frame { min-height: 100vh; }
+  .panel { min-height: 100vh; background: var(--canvas); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 24px 16px 48px; }
+  @media (min-width: 640px) {
+    .frame { padding: 8px; }
+    .panel { min-height: calc(100vh - 16px); border: 1px solid var(--line-soft); border-radius: 14px; }
+    .wrap { padding: 40px 32px 64px; }
+  }
+  header { display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 8px 16px; }
+  .eyebrow { margin: 0; font-size: 12px; font-weight: 500; color: var(--faint); }
+  h1 { margin: 4px 0 0; font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -.01em; }
+  .lead { grid-column: 1 / -1; max-width: 640px; margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+  .seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  .seg button {
+    height: 28px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent;
+    font: inherit; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer;
+  }
+  .seg button:hover { color: var(--text); }
+  .seg button[aria-pressed=true] { background: var(--surface-3); color: var(--text); }
+  h2 { margin: 36px 0 12px; font-size: 12px; font-weight: 500; color: var(--faint); }
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+  .card {
+    position: relative; display: flex; flex-direction: column; gap: 6px; padding: 16px 16px 14px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-card);
+    transition: border-color .12s, background-color .12s;
+  }
+  .card:hover { border-color: var(--line-strong); background: var(--surface-2); }
+  .card-head { display: flex; align-items: center; gap: 10px; }
+  .card-icon {
+    display: flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px;
+    border-radius: 8px; background: var(--accent-wash); color: var(--accent);
+  }
+  .card-icon svg { width: 16px; height: 16px; }
+  .card-title { font-size: 14px; font-weight: 600; line-height: 20px; text-decoration: none; }
+  /* The title link covers the whole card; the source link sits above it. */
+  .card-title::after { content: ""; position: absolute; inset: 0; border-radius: 12px; }
+  .card-title:focus-visible { outline: none; }
+  .card:has(.card-title:focus-visible) { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .card-blurb { margin: 0; font-size: 13px; line-height: 19px; color: var(--muted); }
+  .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 8px; font-size: 12px; color: var(--faint); }
+  .card-src { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 4px; color: var(--faint); text-decoration: none; border-radius: 4px; }
+  .card-src:hover { color: var(--text); text-decoration: underline; }
+  .card-src:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+  .card-src svg { width: 12px; height: 12px; }
+  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line-soft); font-size: 12px; color: var(--faint); }
+  .nojs { margin-top: 24px; color: var(--muted); }
+</style>
+<script src="nav.js" data-current="home"></script>
+</head>
+<body>
+
+<div class="frame">
+<main class="panel">
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">National Electricity Market</p>
+      <h1>AEMO Dashboards</h1>
+    </div>
+    <div class="seg" role="group" aria-label="Theme">
+      <button type="button" data-theme-set="dark">Dark</button>
+      <button type="button" data-theme-set="light">Light</button>
+    </div>
+    <p class="lead">Dashboards on prices, loss factors and generator performance, built from AEMO's
+      public data. Pick one here or from the sidebar, which every dashboard shares.</p>
+  </header>
+
+  <div id="sections"></div>
+  <noscript><p class="nojs">The dashboard list needs JavaScript. Each dashboard lives at
+    cutout-z.github.io/&lt;repo&gt;/, for example
+    <a href="https://cutout-z.github.io/aemo-historical-prices/">aemo-historical-prices</a>.</p></noscript>
+
+  <footer>Each dashboard is a separate public repository on GitHub, refreshed by its own scheduled job.</footer>
+
+</div>
+</main>
+</div>
+
+<script>
+(function () {
+  var nav = window.AEMO_NAV;
+  var out = document.getElementById('sections');
+  if (!nav) return;
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  var html = '';
+  nav.dashboards.forEach(function (sec) {
+    html += '<section><h2>' + esc(sec.section) + '</h2><div class="grid">';
+    sec.items.forEach(function (it) {
+      html += '<article class="card">' +
+        '<div class="card-head"><span class="card-icon">' + nav.icon(it.icon, '') + '</span>' +
+        '<a class="card-title" href="' + esc(nav.href(it)) + '">' + esc(it.label) + '</a></div>' +
+        '<p class="card-blurb">' + esc(it.blurb) + '</p>' +
+        '<div class="card-foot"><span>' + esc(it.cadence) + '</span>' +
+        '<a class="card-src" href="https://github.com/cutout-z/' + esc(it.repo) + '">Source' + nav.icon('external', '') + '</a></div>' +
+        '</article>';
+    });
+    html += '</div></section>';
+  });
+  out.innerHTML = html;
+})();
+
+(function () {
+  var root = document.documentElement;
+  function sync() {
+    var cur = root.getAttribute('data-theme');
+    document.querySelectorAll('[data-theme-set]').forEach(function (b) {
+      b.setAttribute('aria-pressed', b.dataset.themeSet === cur ? 'true' : 'false');
+    });
+  }
+  document.querySelectorAll('[data-theme-set]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      root.setAttribute('data-theme', b.dataset.themeSet);
+      try { localStorage.setItem('aemo-dashboards:theme', b.dataset.themeSet); } catch (e) {}
+      sync();
+    });
+  });
+  sync();
+})();
+</script>
+</body>
+</html>
