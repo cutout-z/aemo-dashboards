@@ -36,7 +36,7 @@
         repo: 'aemo-generator-credit-dashboard', cadence: 'Updated daily',
         blurb: 'Generation, revenue, capacity factor, curtailment and price capture for each registered generator.' },
       { key: 'renewable-generators', label: 'Renewable Generators', path: 'aemo-renewable-generator-dashboard/', icon: 'sun',
-        repo: 'aemo-renewable-generator-dashboard', cadence: 'Updated daily',
+        repo: 'aemo-renewable-generator-dashboard', cadence: 'Checked daily',
         blurb: 'Curtailment, loss factors and ISP forecasts for every utility-scale solar and wind farm.' },
       { key: 'mlf-tracker', label: 'MLF Tracker', path: 'aemo-mlf-tracker/', icon: 'gauge',
         repo: 'aemo-mlf-tracker', cadence: 'Updated monthly',
