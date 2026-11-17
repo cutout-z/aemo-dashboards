@@ -2,7 +2,14 @@
 
 import pytest
 
-pytest.importorskip("playwright")
+try:
+    import playwright  # noqa: F401
+except ImportError as exc:  # a collection ERROR, which the merge gate counts; never a silent skip
+    raise RuntimeError(
+        "these smoke tests need Playwright (pinned in requirements-dev.txt); run the suite with "
+        "/opt/anaconda3/bin/python3 (playwright 1.58.0 + chromium) or: pip install -r requirements-dev.txt "
+        "&& playwright install chromium"
+    ) from exc
 
 from nav_harness import assert_clean, loaded  # noqa: E402
 
