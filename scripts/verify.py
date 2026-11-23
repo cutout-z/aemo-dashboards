@@ -46,6 +46,12 @@ failures = []
 SHOTS = None  # a folder for one screenshot per view (--screenshots), for the by-eye pass
 
 
+def cannot_run(why):
+    """Exit 2: the run couldn't happen, which is not a pass and not a failed check."""
+    print(f"\nCANNOT RUN: {why}")
+    sys.exit(2)
+
+
 def shoot(page, where):
     if SHOTS:
         page.screenshot(path=str(SHOTS / (where.replace(" ", "_") + ".png")))
@@ -176,7 +182,10 @@ def check_home(browser, url):
             ctx = browser.new_context(viewport={"width": width, "height": height}, service_workers="block")
             page = ctx.new_page()
             log = watch(page)
-            page.goto(f"{url}?theme={theme}", wait_until="networkidle")
+            try:
+                page.goto(f"{url}?theme={theme}", wait_until="networkidle", timeout=60000)
+            except Exception as exc:  # a network problem, not a failed check
+                cannot_run(f"cannot load {url}: {exc}")
             st = page.evaluate(SIDEBAR_STATE)
             check(log["nav_status"] == [200], f"{where}: nav.js loaded (statuses {log['nav_status']})")
             check(st["theme"] == theme, f"{where}: theme is {theme}")
@@ -198,23 +207,27 @@ def check_dashboard(browser, repo, label, nav_js):
         for theme in ("dark", "light"):
             where = f"{repo} {width}px {theme}"
             ctx = browser.new_context(viewport={"width": width, "height": height}, service_workers="block")
+            swapped = []
             if nav_js:
-                ctx.route(LIVE_NAV + "*", lambda route: route.fulfill(status=200, body=nav_js, content_type="application/javascript"))
+                def swap(route):
+                    swapped.append(route.request.url)
+                    route.fulfill(status=200, body=nav_js, content_type="application/javascript")
+                ctx.route(LIVE_NAV + "*", swap)
             page = ctx.new_page()
             log = watch(page)
             try:
                 resp = page.goto(url, wait_until="networkidle", timeout=60000)
             except Exception as exc:  # a network problem, not a failed check
-                print(f"  cannot load {url}: {exc}")
-                sys.exit(2)
+                cannot_run(f"cannot load {url}: {exc}")
             if not resp or resp.status != 200:
-                print(f"  cannot load {url}: HTTP {resp.status if resp else '?'}")
-                sys.exit(2)
+                cannot_run(f"cannot load {url}: HTTP {resp.status if resp else '?'}")
             page.wait_for_timeout(1500)  # charts draw after their data arrives
             # The dashboards switch theme with the data-theme attribute on <html>; nav.js reads the tokens live.
             page.evaluate("t => document.documentElement.setAttribute('data-theme', t)", theme)
             st = page.evaluate(SIDEBAR_STATE)
             check(log["nav_status"] == [200], f"{where}: page loaded nav.js once (statuses {log['nav_status']})")
+            if nav_js:
+                check(len(swapped) == 1, f"{where}: the page ran this checkout's nav.js, not the published one ({len(swapped)} swaps)")
             check_sidebar(st, width, label, where)
             c = page.evaluate(CONTENT_STATE)
             check(c["boxes"] > 0 and c["h1"].strip(), f"{where}: page content rendered (h1 '{c['h1'].strip()[:40]}')")
@@ -254,11 +267,17 @@ def main():
     if args.published:
         import urllib.request
         # a fresh query string skips the Pages cache (about 10 minutes) for this one fetch
-        with urllib.request.urlopen(f"{LIVE_NAV}?verify={int(start)}", timeout=30) as r:
-            live = r.read()
+        try:
+            with urllib.request.urlopen(f"{LIVE_NAV}?verify={int(start)}", timeout=30) as r:
+                live = r.read()
+        except Exception as exc:
+            cannot_run(f"cannot fetch {LIVE_NAV}: {exc}")
         check(live == nav_js, "published nav.js matches this checkout (if not: Pages hasn't deployed yet, or the checkout isn't main)")
     with (contextlib.nullcontext(PAGES + "aemo-dashboards/") if args.published else serve()) as url, sync_playwright() as p:
-        browser = p.chromium.launch()
+        try:
+            browser = p.chromium.launch()
+        except Exception as exc:
+            cannot_run(f"Chromium won't start (playwright install chromium): {exc}")
         try:
             check_home(browser, url)
             if not args.home_only:

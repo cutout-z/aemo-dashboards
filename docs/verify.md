@@ -29,7 +29,8 @@ install chromium`) and network access to `cutout-z.github.io` and the CDNs the d
    Expect the last line `0 failed, <n>s (home page + live dashboards with this nav.js)` and exit code 0.
    Exit 1 lists every failed check at the end; exit 2 means it couldn't run (Playwright missing, a
    dashboard unreachable), which is not a pass. `--home-only` skips the dashboards when offline; it
-   proves less, so say so if you use it.
+   proves less, so say so if you use it. A failure that also shows under `--published` (step 4, run
+   before your change) is the dashboard's own, not your change's: name it as pre-existing.
 
    For the home page (served on a free loopback port under `/aemo-dashboards/`) and each dashboard, at
    1440 px and 375 px wide, dark and light, it checks:
@@ -40,10 +41,13 @@ install chromium`) and network access to `cutout-z.github.io` and the CDNs the d
    - desktop: the sidebar is 232 px, nothing of the page paints over it, `body` is padded 232 px, and
      the page's leftmost content box starts right of it;
    - phone: the top bar shows, the drawer is closed, `body` isn't padded; the menu button opens the
-     drawer over the page with focus on the current link, and Escape and the backdrop close it;
+     drawer over the page with focus on the current link, and Escape and the backdrop close it (the
+     drawer in dark only);
    - no sideways scroll, and no chart runs past the window's right edge;
-   - each dashboard rendered its heading and drew at least one chart or data table (Generator Credit
-     opens on one unit's page, `#CLRKCWF1`, since its landing page is a search box);
+   - each dashboard ran this checkout's `nav.js` (the swap fired once), rendered its heading and drew
+     at least one chart or data table (Generator Credit opens on one unit's page, `#CLRKCWF1`, since
+     its landing page is a search box; it is the only dashboard with charts today, the other four
+     show tables, so the chart-width check bites only there);
    - the home page shows one card per dashboard, linking to its live URL;
    - no page errors and no console errors.
 
@@ -61,6 +65,8 @@ install chromium`) and network access to `cutout-z.github.io` and the CDNs the d
 
    Same checks against the deployed site, plus `published nav.js matches this checkout`. A mismatch
    right after a merge usually means Pages hasn't deployed or its cache hasn't expired: wait and rerun.
+   The match check skips the cache but the pages don't, so before the 10 minutes are up the pages may
+   still run the old copy.
 
 ## What it doesn't cover
 

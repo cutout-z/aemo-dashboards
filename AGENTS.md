@@ -193,7 +193,7 @@ handback notes get copied and published.
 | What | Detail |
 |---|---|
 | Served at | `https://cutout-z.github.io/aemo-dashboards/` (GitHub Pages, `main`, root) |
-| Files | `index.html` (home page), `nav.js` (shared sidebar), `README.md` |
+| Files | `index.html` (home page), `nav.js` (shared sidebar), `README.md`, `tests/` (merge gate), `scripts/verify.py` and `docs/verify.md` (verify recipe), `requirements-dev.txt` |
 | Dashboard list | `DASHBOARDS` in `nav.js`; the home page renders from it via `window.AEMO_NAV` |
 | How pages load it | `<script src="https://cutout-z.github.io/aemo-dashboards/nav.js" data-current="<key>">` at the end of `<head>`, not `defer`/`async` |
 | Keys | `historical-prices`, `negative-prices`, `generator-credit`, `renewable-generators`, `mlf-tracker`; `home` for this site |
