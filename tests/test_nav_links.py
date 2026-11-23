@@ -55,7 +55,7 @@ def test_nav_js_defines_every_key_in_the_array_and_nothing_hidden():
 
 def test_every_page_repo_sends_a_known_data_current_for_its_own_repo():
     pairs = _fixture_pairs()
-    assert len(pairs) == 4, pairs
+    assert len(pairs) == 5, pairs
     for repo, current in pairs:
         assert current in KNOWN, f"{repo} sends data-current={current!r}; nav.js knows {sorted(KNOWN)}"
         assert KNOWN[current] == repo, f"data-current={current!r} is {KNOWN[current]}'s key, not {repo}'s"

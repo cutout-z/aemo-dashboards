@@ -1,11 +1,12 @@
 # repo key: the `data-current` each dashboard page repo sends in its <script src=".../aemo-dashboards/nav.js"> tag.
 # Source: the nav script tag in index.html on main of each repo (cutout-z/aemo-historical-prices, -negative-prices,
-# -renewable-generator-dashboard, -mlf-tracker). The page repos pin the same keys in their own
-# tests/test_nav_contract.py. Refresh after a page repo changes its key:
+# -renewable-generator-dashboard, -mlf-tracker; docs/index.html for -generator-credit-dashboard). The first four
+# pin the same keys in their own tests/test_nav_contract.py. Refresh after a page repo changes its key:
 #   for r in aemo-historical-prices aemo-negative-prices aemo-renewable-generator-dashboard aemo-mlf-tracker; do
 #     echo "$r $(gh api repos/cutout-z/$r/contents/index.html --jq .content | base64 -d | grep -o 'data-current="[^"]*"' | cut -d'"' -f2)"; done
-# aemo-generator-credit-dashboard is not listed: it is not covered by this batch; add its line when it is.
+#   (aemo-generator-credit-dashboard: the same command with contents/docs/index.html)
 aemo-historical-prices historical-prices
 aemo-negative-prices negative-prices
 aemo-renewable-generator-dashboard renewable-generators
 aemo-mlf-tracker mlf-tracker
+aemo-generator-credit-dashboard generator-credit
