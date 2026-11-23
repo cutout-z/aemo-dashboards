@@ -203,6 +203,8 @@ handback notes get copied and published.
 
 ## Verify
 
+**Verify recipe:** `docs/verify.md`. Run it before you call a `nav.js` or `index.html` change done, and its `--published` step after the merge.
+
 Serve a folder that mirrors the live paths (`/aemo-dashboards/` plus each dashboard under its repo
 name), with each dashboard's `index.html` loading `/aemo-dashboards/nav.js`, then open every page at
 1440px and 375px wide, dark and light. Check: the current page is highlighted, nothing on the page is
